@@ -1,0 +1,869 @@
+Nome do Arquivo: Site.Master
+
+
+<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Site.master.cs" Inherits="ItemSystem.SiteMaster" %>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head id="Head1" runat="server">
+    <title>..:: Item System ::..</title>
+  
+   <link href=Estilo.css rel="Stylesheet" type="text/css" />
+
+     
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
+    <script type="text/javascript">
+        var jq = jQuery.noConflict();
+        jq(document).ready((function () {
+            jq('tbody tr:odd').addClass('odd');
+        }));
+    </script>
+    
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server">
+    </asp:ContentPlaceHolder>
+</head>
+
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.7/angular.min.js"></script>
+
+<body>
+    <form id="frmMaster" runat="server">
+   <div id="main">
+        <div class="header">
+            
+            <a href="Itens.aspx" title="ItemSystem"></a>
+            
+            <img src="images/logo.jpg" alt="ItemSystem" />
+            
+            </div>
+
+            <!-- /header -->
+
+                        <div class="navSide radius">
+
+                <ul>
+                    <li>Itens<ul class="itens">
+                            <li><a href="Itens_Add.aspx" title="Cadastrar Item">Cadastrar Item</a></li>
+                            <li><a href="Itens.aspx" title="Pesquisar Item">Pesquisar Item</a></li>
+                        </ul>
+                    </li>
+              
+                </ul>
+
+            </div>
+            <!-- /navSide -->
+         <div id="content" class="radius">
+            <asp:ContentPlaceHolder ID="MainContent" runat="server"/>
+            </asp:ContentPlaceHolder>
+        </div>
+        <!-- /Content -->
+  
+    <div class="footer"></div>
+    <!-- /footer -->
+    </div>
+      <!-- /Main -->
+    </form>
+</body>
+</html>
+
+--------------------------------------------
+
+Nome do Arquivo: Itens.aspx
+
+<%@ Page Title="" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Itens.aspx.cs" Inherits="ItemSystem.Itens" %>
+<asp:Content ID="Content1" ContentPlaceHolderID="HeadContent" runat="server">
+</asp:Content>
+<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server">
+
+<asp:Panel runat="server" ID="pnlShowData" Visible="true">
+        <h1>Itens Cadastrados</h1>
+        <asp:GridView ID="gwDados" runat="server" AutoGenerateColumns="False" 
+            EmptyDataText="Não Existem Itens Cadastrados...">
+            <Columns>
+                <asp:BoundField DataField="id" HeaderText="Código" />
+                <asp:BoundField DataField="nome" HeaderText="Nome" />
+                <asp:BoundField DataField="descricao" HeaderText="Descrição" />
+                <asp:BoundField DataField="data" DataFormatString="{0:d/MM/yyyy}" HeaderText="Data de Realização" />
+                <asp:CheckBoxField DataField="concluida" HeaderText="Tarefa Concluída" />
+                <asp:HyperLinkField DataNavigateUrlFormatString="Itens_Edit.aspx?id={0}" Text="Editar"  DataNavigateUrlFields="id" />
+                <asp:HyperLinkField DataNavigateUrlFormatString="Itens_Excluir.aspx?id={0}" Text="Excluir"  DataNavigateUrlFields="id" />
+                
+            </Columns>
+        </asp:GridView>
+    </asp:Panel>
+
+    <asp:Panel runat="server" ID="pnlSearch" Visible="true">
+        <h1>Pesquisa de Itens</h1>
+        
+        <fieldset>
+            <legend>Opções de Pesquisa</legend>
+            <asp:RadioButtonList ID="rlbTypeSearch" CssClass="rlbTypeSearch" runat="server" RepeatLayout="UnorderedList">
+                <asp:ListItem Value="ID" Selected="True">Código</asp:ListItem>
+                <asp:ListItem>Nome</asp:ListItem>
+                <asp:ListItem Value="Descricao">Descrição</asp:ListItem>
+            </asp:RadioButtonList>
+        </fieldset>
+        <ul>
+
+        <li>
+                <asp:Label Text="Código" ID="label1" runat="server"></asp:Label>
+                <asp:TextBox ID="tbPesqID" Text="" CssClass="radiusInput" runat="server"></asp:TextBox>
+            </li>
+
+            <li>
+                <asp:Label Text="Nome" ID="label9" runat="server"></asp:Label>
+                <asp:TextBox ID="tbPesqNome" Text="" CssClass="radiusInput" runat="server"></asp:TextBox>
+            </li>
+            <li>
+                <asp:Label ID="Label10" runat="server" Text="Descrição"></asp:Label>
+                <asp:TextBox ID="tbPesqDescricao" CssClass="radiusInput" runat="server"></asp:TextBox>
+            </li>
+            <li>
+               <asp:Button ID="btnSearch" CssClass="btn btnSearch" runat="server" 
+                    Text="Pesquisar" onclick="btnSearch_Click" />
+            </li>
+
+            <li>
+               <asp:Button ID="btnVoltar" CssClass="btn btnBack" runat="server" 
+                    Text="Limpar Pesquisa" onclick="btnVoltar_Click" />
+            </li>
+
+        </ul>
+    </asp:Panel>
+
+
+</asp:Content>
+
+Nome do Arquivo: Itens.aspx.cs
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using Model;
+
+namespace ItemSystem
+{
+    public partial class Itens : System.Web.UI.Page
+    {
+
+        private ModelDataContext mdc;
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            if (!IsPostBack)
+            {
+
+                this.populateGrid();
+
+            }
+
+
+        }
+
+        private void populateGrid(int pIndex = -1)
+        { //para povoar o grid
+
+            mdc = new ModelDataContext();
+            try
+            {
+                var sourceMateria = from mat in mdc.Tabela_Items select mat;
+
+
+                switch (pIndex)
+                {
+
+                    case 0://Por Código
+                        {
+                            sourceMateria = from mat in mdc.Tabela_Items
+                                            where mat.id == int.Parse(tbPesqID.Text.Trim())
+                                            select mat;
+
+                            break;
+                        }
+
+                    case 1://Por Nome
+                        {
+                            sourceMateria = from mat in mdc.Tabela_Items
+                                            where mat.Nome.Contains(tbPesqNome.Text.Trim())
+                                            select mat;
+
+                            break;
+                        }
+
+                    case 2://Por Descrição
+                        {
+                            sourceMateria = from mat in mdc.Tabela_Items
+                                            where mat.Descricao.Contains(tbPesqDescricao.Text.Trim())
+                                            select mat;
+                            break;
+                        }
+
+
+                }
+
+
+                gwDados.DataSource = sourceMateria; //Grid
+                gwDados.DataBind();
+
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                mdc.Dispose(); //Se der errado, o objeto é liberado da memória
+
+
+            }
+
+
+        }
+
+        protected void btnSearch_Click(object sender, EventArgs e)
+        {
+            this.populateGrid(rlbTypeSearch.SelectedIndex);
+
+        }
+
+        protected void btnVoltar_Click(object sender, EventArgs e)
+        {
+            this.populateGrid();
+        }
+
+    }
+}
+
+Nome do Arquivo: Itens_Add.aspx
+
+<%@ Page Title="" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Itens_Add.aspx.cs" Inherits="ItemSystem.Itens_Add" %>
+<asp:Content ID="Content1" ContentPlaceHolderID="HeadContent" runat="server">
+</asp:Content>
+<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server">
+
+
+    <asp:Panel runat="server" ID="pnlCadastro" Visible="true">
+        <h1>Cadastro de Itens</h1>
+        <ul>
+            <li>
+                <asp:Label Text="Nome" ID="label1" runat="server"></asp:Label>
+                <asp:TextBox ID="tbNome" Text="" CssClass="radiusInput" runat="server"></asp:TextBox>
+            </li>
+            <li>
+                <asp:Label ID="Label2" runat="server" Text="Descrição"></asp:Label>
+                <asp:TextBox ID="tbDescriao" CssClass="radiusInput" runat="server"></asp:TextBox>
+            </li>
+          
+
+            <li>
+                    
+                <asp:Label ID="Data" runat="server" Text="Data de Realização"></asp:Label>
+                <asp:CompareValidator ID="CompareValidator1" runat="server" ErrorMessage="Data Inválida" ControlToValidate="TbData" ValueToCompare="01/01/1900" Operator="GreaterThan" Type="Date" Display="Dynamic"></asp:CompareValidator>
+                <asp:TextBox ID="TbData" CssClass="radiusInput" runat="server" ValidationGroup="Date"></asp:TextBox>
+            </li>
+
+           
+
+            <li>
+                <asp:Button ID="btnCadastrar" CssClass="btnAdd btn" OnClick="btnCadastrar_Click" runat="server" Text="Cadastrar"  />
+            </li>
+        </ul>
+    </asp:Panel>
+
+
+</asp:Content>
+
+
+Nome do Arquivo: Itens_Add.aspx.cs
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Linq.Expressions;
+using Model;
+
+
+
+namespace ItemSystem
+{
+    public partial class Itens_Add : System.Web.UI.Page
+    {
+        private ModelDataContext mdc;
+
+
+
+        protected void Page_Load(object sender, EventArgs e)
+        {
+
+            //TbDataCadastro.Text = DateTime.Now.ToShortDateString();
+
+        }
+
+        protected void btnCadastrar_Click(object obj, EventArgs e)
+        {
+
+            this.onInsert();
+
+        }
+
+        private void onInsert()
+        { //Para inserir os dados
+            mdc = new ModelDataContext();
+            try
+            {
+                Tabela_Item materia = new Tabela_Item();
+
+                materia.Nome = tbNome.Text.Trim(); //Texto Trincado
+                materia.Descricao = tbDescriao.Text.Trim();
+                materia.Data = Convert.ToDateTime(TbData.Text.Trim()); // Converter para date
+
+                mdc.Tabela_Items.InsertOnSubmit(materia);
+
+                mdc.SubmitChanges();
+
+                Response.Redirect("Itens.aspx");
+
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                //  mdc.Dispose(); //Se der errado, o objeto é liberado da memória
+
+            }
+
+        }
+
+    }
+}
+
+
+Nome do Arquivo: Itens_Edit.aspx
+
+<%@ Page Title="" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Itens_Edit.aspx.cs" Inherits="ItemSystem.Itens_Edit" %>
+<asp:Content ID="Content1" ContentPlaceHolderID="HeadContent" runat="server">
+</asp:Content>
+<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server">
+
+    <asp:Panel runat="server" ID="pnlUpdate" Visible="true">
+        <h1>Atualizar Itens</h1>
+        <ul>
+            <li>
+                <asp:Label ID="Label6" runat="server" Text="Código do Item"></asp:Label>
+                <asp:TextBox ID="tbId" Enabled="false" CssClass="radiusInput disable" runat="server"></asp:TextBox>
+            </li>
+            
+            <li>
+                <asp:Label ID="Label2" runat="server" Text="Nome"></asp:Label>
+                <asp:TextBox ID="tbNome" CssClass="radiusInput" runat="server"></asp:TextBox>
+            </li>
+
+            <li>
+                <asp:Label ID="Label5" runat="server" Text="Descrição"></asp:Label>
+                <asp:TextBox ID="tbDescricao" CssClass="radiusInput" runat="server"></asp:TextBox>
+            </li>
+            <li>
+                <asp:Label ID="Label1" runat="server" Text="Data de Realização"></asp:Label>
+                <asp:TextBox ID="tbData" CssClass="radiusInput" runat="server"></asp:TextBox>
+            </li>
+             <li>
+                <asp:Label ID="Concluida" runat="server" Text="Tarefa Concluída"></asp:Label>
+                <asp:CheckBox ID="TbConcluida" runat="server" />
+               
+            </li>
+            <li>
+                <asp:Button ID="bntAtualizar" CssClass="btn btnEdit" runat="server" 
+                    Text="Atualizar" onclick="bntAtualizar_Click" />
+            </li>
+        </ul>
+    </asp:Panel>
+
+</asp:Content>
+
+
+Nome do Arquivo: Itens_Edit.aspx.cs
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using Model;
+
+namespace ItemSystem
+{
+    public partial class Itens_Edit : System.Web.UI.Page
+    {
+
+        private ModelDataContext mdc;
+
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            if (!IsPostBack)
+            {
+
+                try
+                {
+
+                    this.populateFields(int.Parse(Request.QueryString["id"]));
+                }
+
+                catch (Exception)
+                {
+
+                    this.populateFields(); // Se der um erro você não me passa nada
+                }
+
+            }
+        }
+
+        private void onUpdate()
+        {
+
+            mdc = new ModelDataContext();
+            try
+            {
+
+                Tabela_Item materia = mdc.Tabela_Items.First(mat => mat.id == int.Parse(tbId.Text.Trim())); // primeiro item com id = ao do parâmetro
+
+                materia.Nome = tbNome.Text.Trim();
+                materia.Descricao = tbDescricao.Text.Trim();
+                materia.Data = Convert.ToDateTime(tbData.Text.Trim());
+                materia.Concluida = TbConcluida.Checked;
+   
+                mdc.SubmitChanges();
+
+                Response.Redirect("Itens.aspx"); //Retorna à página de itens
+
+            }
+
+            catch (Exception)
+            {
+
+
+            }
+
+            finally
+            {
+                mdc.Dispose();
+            }
+        }
+
+        private void populateFields(int pGetID = 0)
+        {
+            mdc = new ModelDataContext();
+            try
+            {
+
+                if (pGetID > 0)
+                {
+                    Tabela_Item materia = mdc.Tabela_Items.First(mat => mat.id == pGetID); // primeiro item com id = ao do parâmetro
+
+                    tbId.Text = pGetID.ToString();
+                    tbNome.Text = materia.Nome.Trim();
+                    tbDescricao.Text = materia.Descricao.Trim();
+                    tbData.Text = materia.Data.ToString();
+                    TbConcluida.Checked = materia.Concluida.Value;
+                    
+                }
+                else
+                {  Response.Redirect("Itens.aspx");}
+
+            }
+            catch (Exception){}
+           
+            finally{mdc.Dispose();}
+        }
+
+        protected void bntAtualizar_Click(object sender, EventArgs e)
+        {
+            this.onUpdate();
+        }
+    }
+}
+
+Nome do Arquivo:Itens_Excluir.aspx
+
+<%@ Page Title="" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Itens_Excluir.aspx.cs" Inherits="ItemSystem.Itens_Excluir" %>
+<asp:Content ID="Content1" ContentPlaceHolderID="HeadContent" runat="server">
+</asp:Content>
+<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server">
+
+<asp:Panel runat="server" ID="pnlExcluir" Visible="true">
+        <h1>Excluir Item</h1>
+        <ul>
+            <li>
+                <asp:Label Text="Código" ID="label3" runat="server"></asp:Label>
+                <asp:TextBox ID="tbCodigo" Text="" Enabled="false" CssClass="disable radiusInput" runat="server"></asp:TextBox>
+            </li>
+            <li>
+                <asp:Label Text="Nome" ID="label1" runat="server"></asp:Label>
+                <asp:TextBox ID="tbNome" Text="" Enabled="false" CssClass="disable radiusInput" runat="server"></asp:TextBox>
+            </li>
+            <li>
+                <asp:Label ID="Label2" runat="server" Text="Descrição"></asp:Label>
+                <asp:TextBox ID="tbDescricao" Enabled="false" CssClass="disable radiusInput" runat="server"></asp:TextBox>
+            </li>
+              <li>
+                <asp:Button ID="btnExcluir" CssClass="btnDelete btn" runat="server" Text="Excluir" Onclick="btnExcluir_Click"  />
+            </li>
+        </ul>
+    </asp:Panel>
+</asp:Content>
+
+
+Nome do Arquivo:Itens_Excluir.aspx.cs
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using Model;
+
+namespace ItemSystem
+{
+    public partial class Itens_Excluir : System.Web.UI.Page
+    {
+
+        private ModelDataContext mdc;
+
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            if (!IsPostBack)
+            {
+
+                try
+                {this.populateFields(int.Parse(Request.QueryString["id"]));}
+
+              catch (Exception){this.populateFields(); // Se der um erro você não me passa nada}
+                
+            }
+        }
+
+        private void populateFields(int pGetID = 0)
+        {
+            mdc = new ModelDataContext();
+            try
+            {
+
+                if (pGetID > 0)
+                {
+                    Tabela_Item materia = mdc.Tabela_Items.First(mat => mat.id == pGetID); // primeiro item com id = ao do parâmetro
+
+                    tbCodigo.Text = pGetID.ToString();
+                    tbNome.Text = materia.Nome.Trim();
+                    tbDescricao.Text = materia.Descricao.Trim();
+
+                }
+                else
+                {Response.Redirect("Itens.aspx");}
+            }
+
+            catch (Exception){}
+            
+            finally{ mdc.Dispose();}
+          }
+
+        private void onDelete()
+        {
+            mdc = new ModelDataContext();
+            try
+            {
+                Tabela_Item materia = mdc.Tabela_Items.First(mat => mat.id == int.Parse(tbCodigo.Text.Trim())); // primeiro item com id = ao do parâmetro
+
+                mdc.Tabela_Items.DeleteOnSubmit(materia);
+                mdc.SubmitChanges();
+
+                Response.Redirect("Itens.aspx"); //Retorna à página de itens
+            }
+            catch (Exception){}
+            finally{mdc.Dispose();}
+          }
+        protected void btnExcluir_Click(object sender, EventArgs e)
+        {
+            this.onDelete();
+        }
+
+    }
+}
+
+Nome do Arquivo: Estilo.css
+
+* {
+    margin: 0;
+    padding: 0;
+    outline: none;
+    float: none;
+    background: none;
+    border: none;
+}
+
+body {
+    background: #F5F5F5;
+    font: 12px Arial, Tahoma, Verdana;
+    color: #163563;
+}
+
+#main {
+    margin: 0 auto;
+    width: 1000px;
+}
+
+/*begin header*/
+.header {
+    width: 1000px;
+    height: 205px;
+}
+
+    .header img {
+        float: left;
+        margin: 10px;
+    }
+/*end header*/
+/*begin radius*/
+.radius {
+    -webkit-border-radius: 20px;
+    -moz-border-radius: 20px;
+    border-radius: 20px;
+    background: #fff;
+    border: 1px solid #ECECFB;
+}
+
+.radiusInput {
+    -webkit-border-radius: 6px;
+    -moz-border-radius: 6px;
+    border-radius: 6px;
+    background: #FBFBFB;
+    border: 1px solid #dedede;
+}
+/*end radius*/
+/*begin sidebar*/
+.navSide {
+    width: 250px;
+    min-height: 95px;
+    float: left;
+    padding:15px 0;
+}
+
+.navSide ul {
+    list-style:none;
+}
+.navSide ul li{
+    display:block;
+    margin:0 20px;
+    padding:5px;
+    color:#000;
+    font-weight:800;
+}
+.navSide ul li a{
+    display:block;
+    padding:0;
+    color:#295FB1;    
+    text-decoration:none;
+}
+.navSide ul li a:hover{
+    color:#1D4583;
+}
+
+.navSide ul li ul.itens{
+    list-style:circle;
+}
+
+.navSide ul li ul.itens li a{
+    display:block;
+    padding:0;
+    color:#295FB1;
+    text-decoration:none;
+}
+.navSide ul li ul.itens li a:hover{
+    color:#1D4583;
+}
+
+
+/*end sidebar*/
+/*begin content*/
+#content {
+    width: 740px;
+    float: right;
+    margin-bottom: 100px;
+    min-height: 300px;
+}
+
+
+    #content div {
+        margin: 10px;
+        float: left;
+        padding: 0;
+    }
+
+        #content div h1 {
+            margin: 8px 10px;
+            font: 20px Arial, Verdana;
+        }
+
+        #content div table {
+            width: 697px;
+            margin: 15px 5px;
+            border-spacing: 0;
+            border-collapse: collapse;
+        }
+
+            #content div table tr th {
+                background: #729DDE;
+                text-align: center;
+                color: #F5F5F5;
+                border: 1px solid #E6E6E6;
+                font-weight: 800;
+            }
+
+                #content div table thead tr th,
+                table tbody tr td {
+                    border: 1px solid #E6E6E6;
+                    padding: 8px 0;
+                }
+
+            #content div table tbody tr td {
+                padding-left: 8px;
+            }
+            
+            #content div table tbody tr td a {
+                color: #295FB1;
+                text-decoration:none;
+                font-weight:bold;      
+                             
+            }
+            
+            #content div table tbody tr td a:hover {
+                color: #1D4583;
+                text-decoration:none;
+                font-weight:bold;      
+                             
+            }
+
+
+            #content div table tbody .odd {
+                background: #C8D9F2;
+            }
+
+    #content ul {
+        list-style: none;
+    }
+
+        #content ul li {
+            display: inline-block;
+            margin: 10px 5px;
+            width: 220px;
+        }
+
+            #content ul li span {
+                display: block;
+                margin-bottom: 12px;
+                font: 13px Arial,Verdana,Tahoma;
+                font-weight: 800;
+            }
+
+            #content ul li input[type="text"] {
+                padding: 8px;
+                margin: 0 3px;
+                width: 200px;
+                color: #666;
+            }
+
+
+fieldset {
+    -webkit-border-radius: 6px;
+    -moz-border-radius: 6px;
+    border-radius: 6px;
+    width: 370px;
+    background: #FBFBFB;
+    border: 1px solid #dedede;
+    margin: 20px 20px 10px 20px;
+    font: 13px Arial,Verdana,Tahoma;
+    font-weight: 800;
+    color: #23549E;
+    padding-left: 10px;
+}
+
+#rlbTypeSearch {
+    float: left;
+    margin: 10px;
+}
+
+fieldset #rlbTypeSearch li {
+    float: left;
+    width: 85px;
+    margin: 10px;
+}
+
+    fieldset #rlbTypeSearch li input[type="radio"] {
+        margin-right: 10px;
+    }
+
+
+.disable {
+    font-weight: 800;
+    background: #fff;
+    cursor:no-drop;
+}
+/*end content*/
+/*begin buttons*/
+.btn {
+    width: 210px;
+    height: 50px;
+    line-height: 50px;
+    border: 1px solid #ddd;
+    color: #23549E;
+    cursor: pointer;
+    font-weight: 800;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+}
+
+.btnAdd {
+    background: #F5F5F5 url(../images/save.png) no-repeat left 2px;
+}
+
+.btnEdit {
+    background: #F5F5F5 url(../images/file_edit.png) no-repeat left;
+}
+
+.btnSearch {
+    background: #F5F5F5 url(../images/search.png) no-repeat left 1px;
+}
+
+.btnDelete {
+    background: #F5F5F5 url(../images/delete.png) no-repeat left 1px;
+}
+
+.btnBack {
+    background: #F5F5F5 url(../images/clear.png) no-repeat left 1px;
+}
+
+/*end buttons*/
+
+Banco de Dados
+
+CREATE DATABASE ItemBD
+
+
+CREATE TABLE Tabela_Item(
+   id INT NOT NULL IDENTITY(1,1),
+   Nome      VARCHAR(255),
+   Descricao VARCHAR(255),
+   Data DATETIME,
+   Concluida BIT
+
+);
+
+ALTER TABLE Tabela_Item ADD CONSTRAINT PK_TABELA_ITEM
+ 			PRIMARY KEY (id) 
